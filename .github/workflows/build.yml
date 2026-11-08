@@ -1,0 +1,69 @@
+name: Build ENGINE Dylib
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip Source
+        run: |
+          unzip "SRC_BY__capriskaaa.zip" -d MyESP
+          mv "MyESP/ENGINE" "MyESP/src"
+          echo "=== Structure ==="
+          ls -la MyESP/src/
+          ls -la MyESP/src/ESP/
+
+      - name: Setup Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+          echo "$HOME/theos/bin" >> $GITHUB_PATH
+
+      - name: Install SDK
+        run: |
+          git clone --depth=1 https://github.com/theos/sdks.git /tmp/sdks
+          rsync -a /tmp/sdks/iPhoneOS*.sdk $HOME/theos/sdks/
+
+      - name: Setup Dobby
+        run: |
+          # Zip ka apna libdobby_fixed.a use karo — build skip
+          cp MyESP/src/PatchNonJB/libdobby_fixed.a $HOME/theos/lib/libdobby.a
+          cp MyESP/src/PatchNonJB/dobby.h $HOME/theos/include/
+          echo "Dobby ready from source"
+
+      - name: Fix Includes
+        run: |
+          INCLUDES="MyESP/src/ESP/Includes.h"
+          sed -i '' 's/#define LOGD.*//g' "$INCLUDES"
+          sed -i '' 's/#define LOGE.*//g' "$INCLUDES"
+          sed -i '' 's/#define LOGI.*//g' "$INCLUDES"
+          sed -i '' 's/#define LOGW.*//g' "$INCLUDES"
+          sed -i '' 's/#include.*android_log.*//g' "$INCLUDES"
+          echo "Includes fixed"
+
+      - name: Install ldid
+        run: brew install ldid
+
+      - name: Build Dylib
+        run: |
+          cd MyESP/src
+          make clean
+          make 2>&1
+
+      - name: Find Dylib
+        run: |
+          mkdir -p /tmp/output
+          find MyESP -name "*.dylib" -exec cp {} /tmp/output/ \;
+          find MyESP -name "*.deb" -exec cp {} /tmp/output/ \;
+          echo "=== Output ==="
+          ls -la /tmp/output/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ENGINE-build
+          path: /tmp/output/
+          if-no-files-found: warn
