@@ -10,7 +10,7 @@ jobs:
 
       - name: Unzip Source
         run: |
-          unzip "SRC BY @capriskaaa.zip" -d MyESP
+          unzip "SRC_BY__capriskaaa.zip" -d MyESP
           mv "MyESP/ENGINE" "MyESP/src"
           echo "=== Structure ==="
           ls -la MyESP/src/
@@ -29,7 +29,6 @@ jobs:
 
       - name: Setup Dobby
         run: |
-          # Zip ka apna libdobby_fixed.a use karo — build skip
           cp MyESP/src/PatchNonJB/libdobby_fixed.a $HOME/theos/lib/libdobby.a
           cp MyESP/src/PatchNonJB/dobby.h $HOME/theos/include/
           echo "Dobby ready from source"
@@ -43,6 +42,8 @@ jobs:
           sed -i '' 's/#define LOGW.*//g' "$INCLUDES"
           sed -i '' 's/#include.*android_log.*//g' "$INCLUDES"
           echo "Includes fixed"
+          sed -i '' 's/#import <netinet6\/in6.h>/#import <netinet\/in.h>/g' "MyESP/src/authcheatbot/Reachability.m"
+          echo "Reachability fixed"
 
       - name: Install ldid
         run: brew install ldid
